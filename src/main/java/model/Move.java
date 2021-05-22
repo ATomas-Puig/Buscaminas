@@ -14,6 +14,10 @@ public class Move implements Serializable {
         this.player = player;
     }
 
+    public Move(){
+
+    }
+
     public int getX() {
         return x;
     }

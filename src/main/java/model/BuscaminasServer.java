@@ -11,10 +11,10 @@ public class BuscaminasServer {
 
     NetworkInterface nInterface;
 
-    public BuscaminasServer (int port){
+    public BuscaminasServer(int port) {
         try {
-         socket = new DatagramSocket(port);
-         nInterface = NetworkInterface.getByName("wlan1");
+            socket = new DatagramSocket(port);
+            nInterface = NetworkInterface.getByName("wlan1");
 
         } catch (SocketException e) {
             e.printStackTrace();
@@ -22,7 +22,7 @@ public class BuscaminasServer {
 
         this.port = port;
         board = new Board();
-        //board.initBoard();
+        board.initBoard();
         end = false;
         players_ended = 0;
 
@@ -34,7 +34,7 @@ public class BuscaminasServer {
         InetAddress clientIP;
         int clientPort;
 
-        while (!end){
+        do {
             DatagramPacket packet = new DatagramPacket(receivingData, receivingData.length);
             socket.receive(packet);
             sendingData = processData(packet.getData(), packet.getLength());
@@ -42,7 +42,7 @@ public class BuscaminasServer {
             clientPort = packet.getPort();
             packet = new DatagramPacket(sendingData, sendingData.length, clientIP, clientPort);
             socket.send(packet);
-        }
+        } while (!end);
     }
 
     private byte[] processData(byte[] data, int length) {
@@ -53,12 +53,13 @@ public class BuscaminasServer {
         try {
             ois = new ObjectInputStream(in);
             move = (Move) ois.readObject();
-            if (move.getPlayer() == board.getTurn()){
-                if (board.getBoard()[move.getX()][move.getY()] == 0){
+            if (move.getPlayer() == board.getTurn()) {
+                if (board.getBoard()[move.getX()][move.getY()] == 0) {
                     board.getBoard()[move.getY()][move.getY()] = move.getPlayer();
-                } else if (board.getBoard()[move.getX()][move.getY()] == 3){
+                } else if (board.getBoard()[move.getX()][move.getY()] == 3) {
                     board.setLoser(move.getPlayer());
                     board.setEnded(true);
+                    end = true;
                 }
             }
 
@@ -69,8 +70,25 @@ public class BuscaminasServer {
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         ObjectOutputStream oos = null;
 
+        try {
+            oos = new ObjectOutputStream(os);
+            oos.writeObject(board);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-        return null;
+        byte[] answer = os.toByteArray();
+        return answer;
+
+    }
+
+    public static void main(String[] args) {
+        BuscaminasServer buscaminasServer = new BuscaminasServer(5555);
+        try {
+            buscaminasServer.runServer();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }

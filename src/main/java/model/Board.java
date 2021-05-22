@@ -6,7 +6,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class Board implements Serializable {
     public static final long serialVersionUID = 1L;
     private int[][] board;
-    private int mines;
+    private final int mines;
     private int randomNumber1;
     private int randomNumber2;
     private int turn;
@@ -20,6 +20,8 @@ public class Board implements Serializable {
 
     public void initBoard() {
         turn = 1;
+        loser = 0;
+        ended = false;
         for (int i = 0; i < board.length - 1; i++) {
             for (int j = 0; j < board[i].length - 1; j++) {
                 board[i][j] = 0;
@@ -85,6 +87,7 @@ public class Board implements Serializable {
     public String toString() {
         String s = "";
         for (int i = 0; i < board.length; i++) {
+
             s = s + (i + 1);
             for (int j = 0; j < board[i].length; j++) {
                 if (board[i][j] == 0) {
@@ -93,7 +96,7 @@ public class Board implements Serializable {
                     s = s + "[ ]";
                 }
                 if (i == 8){
-                    System.out.println(j);
+                    System.out.println(i);
                 }
             }
             s = s + "\n";
