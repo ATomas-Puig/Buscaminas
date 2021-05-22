@@ -22,6 +22,7 @@ public class BuscaminasServer {
 
         this.port = port;
         board = new Board();
+        //board.initBoard();
         end = false;
         players_ended = 0;
 
@@ -55,16 +56,21 @@ public class BuscaminasServer {
             if (move.getPlayer() == board.getTurn()){
                 if (board.getBoard()[move.getX()][move.getY()] == 0){
                     board.getBoard()[move.getY()][move.getY()] = move.getPlayer();
-                } else if (board.getBoard()[move.getX()][move.getY()] == 1 || board.getBoard()[move.getX()][move.getY()] == 2){
-
+                } else if (board.getBoard()[move.getX()][move.getY()] == 3){
+                    board.setLoser(move.getPlayer());
+                    board.setEnded(true);
                 }
             }
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
+        } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
+
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        ObjectOutputStream oos = null;
+
+
+        return null;
     }
 
 }

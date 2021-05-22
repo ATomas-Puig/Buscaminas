@@ -11,6 +11,7 @@ public class Board implements Serializable {
     private int randomNumber2;
     private int turn;
     private boolean ended;
+    private int loser;
 
     public Board() {
         mines = 10;
@@ -72,6 +73,14 @@ public class Board implements Serializable {
         this.board = board;
     }
 
+    public int getLoser() {
+        return loser;
+    }
+
+    public void setLoser(int loser) {
+        this.loser = loser;
+    }
+
     @Override
     public String toString() {
         String s = "";
@@ -81,14 +90,13 @@ public class Board implements Serializable {
                 if (board[i][j] == 0) {
                     s = s + "[ ]";
                 } else if (board[i][j] == 3) {
-                    s = s + "[*]";
+                    s = s + "[ ]";
                 }
                 if (i == 8){
                     System.out.println(j);
                 }
             }
             s = s + "\n";
-
         }
         return s;
     }
