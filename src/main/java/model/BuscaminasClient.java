@@ -12,6 +12,10 @@ public class BuscaminasClient {
     private Board board;
     private Move move;
 
+    private MulticastSocket multiSocket;
+    private InetAddress multicastIP;
+
+    InetSocketAddress groupMulticast;
     NetworkInterface networkInterface;
 
     public BuscaminasClient(String ip, int port, int player) {
@@ -21,8 +25,11 @@ public class BuscaminasClient {
         this.move.setPlayer(player);
 
         try {
+            multiSocket = new MulticastSocket(5557);
+            multicastIP = InetAddress.getByName("224.0.0.10");
+            groupMulticast = new InetSocketAddress(multicastIP, 5557);
             networkInterface = NetworkInterface.getByName("wlan1");
-        } catch (SocketException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
@@ -41,20 +48,24 @@ public class BuscaminasClient {
         DatagramPacket packet;
         DatagramSocket socket = new DatagramSocket();
 
-        sendingData = firstMove();
+        multiSocket.joinGroup(groupMulticast, networkInterface);
+
+        //sendingData = firstMove();
 
         do {
             try {
+                DatagramPacket multiPacket = new DatagramPacket(receivedData, receivedData.length);
+                multiSocket.receive(multiPacket);
+                sendingData = processData(multiPacket.getData(), multiPacket.getLength());
+
                 packet = new DatagramPacket(sendingData, sendingData.length, destinationAddress, destinationPort);
                 socket.send(packet);
-                packet = new DatagramPacket(receivedData, 1024);
-                socket.receive(packet);
-                sendingData = processData(packet.getData(), packet.getLength());
 
             } catch (IOException e) {
                 e.printStackTrace();
             }
         } while (!board.isEnded());
+        multiSocket.leaveGroup(groupMulticast, networkInterface);
     }
 
     private byte[] firstMove() {
@@ -107,22 +118,10 @@ public class BuscaminasClient {
                 System.out.println(printBoard(board));
             }
 
-            while (!validPlay && !board.isEnded()) {
-                if (board.getTurn() != move.getPlayer()) {
-                    move.setX(-1);
-                    move.setY(-1);
+            if (board.getTurn() == move.getPlayer()) {
 
-                    try {
-                        oos = new ObjectOutputStream(os);
-                        oos.writeObject(move);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                while (!validPlay && !board.isEnded()) {
 
-                    byte[] answer = os.toByteArray();
-                    return answer;
-
-                } else {
                     System.out.println("Introduce tu jugada:");
                     System.out.print("Introduce la coordenada X: ");
                     int x = sc.nextInt();
@@ -136,8 +135,8 @@ public class BuscaminasClient {
                         move.setY(y);
                         validPlay = true;
                     }
-
                 }
+
             }
 
 
