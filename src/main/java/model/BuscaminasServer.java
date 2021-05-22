@@ -53,13 +53,17 @@ public class BuscaminasServer {
         try {
             ois = new ObjectInputStream(in);
             move = (Move) ois.readObject();
-            if (move.getPlayer() == board.getTurn()) {
-                if (board.getBoard()[move.getX()][move.getY()] == 0) {
-                    board.getBoard()[move.getY()][move.getY()] = move.getPlayer();
-                } else if (board.getBoard()[move.getX()][move.getY()] == 3) {
-                    board.setLoser(move.getPlayer());
-                    board.setEnded(true);
-                    end = true;
+
+            if (move.getX() != -1 && move.getY() != -1) {
+                if (move.getPlayer() == board.getTurn()) {
+                    if (board.getBoard()[move.getX()][move.getY()] == 0) {
+                        board.getBoard()[move.getY()][move.getY()] = move.getPlayer();
+                        board.changeTurn();
+                    } else if (board.getBoard()[move.getX()][move.getY()] == 3) {
+                        board.setLoser(move.getPlayer());
+                        board.setEnded(true);
+                        end = true;
+                    }
                 }
             }
 

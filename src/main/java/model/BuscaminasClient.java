@@ -50,6 +50,7 @@ public class BuscaminasClient {
                 packet = new DatagramPacket(receivedData, 1024);
                 socket.receive(packet);
                 sendingData = processData(packet.getData(), packet.getLength());
+
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -84,40 +85,58 @@ public class BuscaminasClient {
 
     private byte[] processData(byte[] data, int length) {
         Scanner sc = new Scanner(System.in);
-        Board board = null;
         boolean validPlay = false;
 
         ByteArrayInputStream in = new ByteArrayInputStream(data);
         ObjectInputStream ois = null;
 
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        ObjectOutputStream oos = null;
         try {
             ois = new ObjectInputStream(in);
             board = (Board) ois.readObject();
 
             if (board.isEnded()) {
-                printEndedBoard(board);
                 if (board.getLoser() == move.getPlayer()) {
                     System.out.println("Qué pena pringado, te ha reventado una puta bomba en la cara y has perdido.");
                 } else {
                     System.out.println("¡Enhorabuena pichón, has ganado!");
                 }
+                System.out.println(printEndedBoard(board));
             } else {
-                printBoard(board);
+                System.out.println(printBoard(board));
             }
 
-            while (!validPlay) {
-                System.out.println("Introduce tu jugada:");
-                System.out.print("Introduce la coordenada X: ");
-                int x = sc.nextInt();
-                System.out.print("Introduce la coordenada Y: ");
-                int y = sc.nextInt();
+            while (!validPlay && !board.isEnded()) {
+                if (board.getTurn() != move.getPlayer()) {
+                    move.setX(-1);
+                    move.setY(-1);
 
-                if (board.getBoard()[x][y] == 1 || board.getBoard()[x][y] == 2) {
-                    System.out.println("La jugada no es válida, por favor, introduce una jugada válida:");
+                    try {
+                        oos = new ObjectOutputStream(os);
+                        oos.writeObject(move);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                    byte[] answer = os.toByteArray();
+                    return answer;
+
                 } else {
-                    move.setX(x);
-                    move.setY(y);
-                    validPlay = true;
+                    System.out.println("Introduce tu jugada:");
+                    System.out.print("Introduce la coordenada X: ");
+                    int x = sc.nextInt();
+                    System.out.print("Introduce la coordenada Y: ");
+                    int y = sc.nextInt();
+
+                    if (board.getBoard()[x][y] == 1 || board.getBoard()[x][y] == 2) {
+                        System.out.println("La jugada no es válida, por favor, introduce una jugada válida:");
+                    } else {
+                        move.setX(x);
+                        move.setY(y);
+                        validPlay = true;
+                    }
+
                 }
             }
 
@@ -126,8 +145,6 @@ public class BuscaminasClient {
             e.printStackTrace();
         }
 
-        ByteArrayOutputStream os = new ByteArrayOutputStream();
-        ObjectOutputStream oos = null;
 
         try {
             oos = new ObjectOutputStream(os);
@@ -145,7 +162,7 @@ public class BuscaminasClient {
     public String printBoard(Board board) {
         String s = "";
         for (int i = 0; i < board.getBoard().length; i++) {
-            s = s + (i + 1);
+            s = s + (i);
             for (int j = 0; j < board.getBoard()[i].length; j++) {
                 if (board.getBoard()[i][j] == 0) {
                     s = s + "[ ]";
@@ -169,7 +186,7 @@ public class BuscaminasClient {
     public void printFirstBoard() {
         String s = "";
         for (int i = 0; i < 8; i++) {
-            s = s + (i + 1);
+            s = s + (i);
             for (int j = 0; j < 8; j++) {
                 s = s + "[ ]";
                 if (i == 8) {
@@ -184,7 +201,7 @@ public class BuscaminasClient {
     public String printEndedBoard(Board board) {
         String s = "";
         for (int i = 0; i < board.getBoard().length; i++) {
-            s = s + (i + 1);
+            s = s + (i);
             for (int j = 0; j < board.getBoard()[i].length; j++) {
                 if (board.getBoard()[i][j] == 0) {
                     s = s + "[ ]";
