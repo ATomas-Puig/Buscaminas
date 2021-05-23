@@ -1,4 +1,7 @@
-package model;
+package main;
+
+import model.Board;
+import model.Move;
 
 import java.io.*;
 import java.net.*;
@@ -6,11 +9,11 @@ import java.util.Scanner;
 
 public class BuscaminasClient {
 
+    private Board board;
+    private Move move;
     private int destinationPort;
     private String srvIp;
     private InetAddress destinationAddress;
-    private Board board;
-    private Move move;
 
     private MulticastSocket multiSocket;
     private InetAddress multicastIP;
@@ -28,7 +31,7 @@ public class BuscaminasClient {
             multiSocket = new MulticastSocket(5557);
             multicastIP = InetAddress.getByName("224.0.0.10");
             groupMulticast = new InetSocketAddress(multicastIP, 5557);
-            networkInterface = NetworkInterface.getByName("wlan1");
+            networkInterface = NetworkInterface.getByName("wlan2");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -38,19 +41,17 @@ public class BuscaminasClient {
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
-
     }
 
     public void runClient() throws IOException {
         byte[] receivedData = new byte[1024];
-        byte[] sendingData = new byte[1024];
+        byte[] sendingData;
 
         DatagramPacket packet;
         DatagramSocket socket = new DatagramSocket();
 
         multiSocket.joinGroup(groupMulticast, networkInterface);
-
-        //sendingData = firstMove();
+        System.out.println("Esperando respuesta del servidor.");
 
         do {
             try {
@@ -58,45 +59,24 @@ public class BuscaminasClient {
                 multiSocket.receive(multiPacket);
                 sendingData = processData(multiPacket.getData(), multiPacket.getLength());
 
-                packet = new DatagramPacket(sendingData, sendingData.length, destinationAddress, destinationPort);
-                socket.send(packet);
+                if (board.getTurn() == this.move.getPlayer() && sendingData != null) {
+                    packet = new DatagramPacket(sendingData, sendingData.length, destinationAddress, destinationPort);
+                    socket.send(packet);
+                }
 
             } catch (IOException e) {
                 e.printStackTrace();
             }
         } while (!board.isEnded());
         multiSocket.leaveGroup(groupMulticast, networkInterface);
+        socket.close();
     }
-
-    private byte[] firstMove() {
-        printFirstBoard();
-        Scanner sc = new Scanner(System.in);
-        System.out.println("Introduce tu jugada:");
-        System.out.print("Introduce la coordenada X: ");
-        int x = sc.nextInt();
-        System.out.print("Introduce la coordenada Y: ");
-        int y = sc.nextInt();
-        move.setX(x);
-        move.setY(y);
-
-        ByteArrayOutputStream os = new ByteArrayOutputStream();
-        ObjectOutputStream oos = null;
-
-        try {
-            oos = new ObjectOutputStream(os);
-            oos.writeObject(move);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        byte[] answer = os.toByteArray();
-        return answer;
-    }
-
 
     private byte[] processData(byte[] data, int length) {
         Scanner sc = new Scanner(System.in);
         boolean validPlay = false;
+        int x = -1;
+        int y = -1;
 
         ByteArrayInputStream in = new ByteArrayInputStream(data);
         ObjectInputStream ois = null;
@@ -106,56 +86,51 @@ public class BuscaminasClient {
         try {
             ois = new ObjectInputStream(in);
             board = (Board) ois.readObject();
-
-            if (board.isEnded()) {
-                if (board.getLoser() == move.getPlayer()) {
-                    System.out.println("Qué pena pringado, te ha reventado una puta bomba en la cara y has perdido.");
-                } else {
-                    System.out.println("¡Enhorabuena pichón, has ganado!");
-                }
-                System.out.println(printEndedBoard(board));
-            } else {
-                System.out.println(printBoard(board));
-            }
-
-            if (board.getTurn() == move.getPlayer()) {
-
-                while (!validPlay && !board.isEnded()) {
-
-                    System.out.println("Introduce tu jugada:");
-                    System.out.print("Introduce la coordenada X: ");
-                    int x = sc.nextInt();
-                    System.out.print("Introduce la coordenada Y: ");
-                    int y = sc.nextInt();
-
-                    if (board.getBoard()[x][y] == 1 || board.getBoard()[x][y] == 2) {
-                        System.out.println("La jugada no es válida, por favor, introduce una jugada válida:");
-                    } else {
-                        move.setX(x);
-                        move.setY(y);
-                        validPlay = true;
-                    }
-                }
-
-            }
-
-
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
+        System.out.println(printBoard(board));
 
+        if (!board.isEnded()) {
+            if (board.getTurn() == this.move.getPlayer()) {
 
-        try {
-            oos = new ObjectOutputStream(os);
-            oos.writeObject(move);
-        } catch (IOException e) {
-            e.printStackTrace();
+                System.out.println("Es tu turno. Introduce las coordenadas:");
+
+                while (!validPlay) {
+                    System.out.println("X: ");
+                    x = sc.nextInt();
+                    System.out.println("Y: ");
+                    y = sc.nextInt();
+
+                    if (board.getBoard()[x][y] == 1 || board.getBoard()[x][y] == 2)
+                        System.out.println("La jugada no es válida. Introduce de nuevo las coordenadas.");
+                    else validPlay = true;
+                }
+
+                move.setX(x);
+                move.setY(y);
+
+                try {
+                    oos = new ObjectOutputStream(os);
+                    oos.writeObject(move);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                return os.toByteArray();
+
+            } else {
+                System.out.println("Es el turno de tu oponente. Por favor, espera.");
+            }
+        } else if (board.getLoser() == move.getPlayer()) {
+            System.out.println("Has perdido.");
+            System.out.println(printEndedBoard(board));
+        } else {
+            System.out.println("Has ganado.");
+            System.out.println(printEndedBoard(board));
         }
 
-        byte[] answer = os.toByteArray();
-        return answer;
-
-
+        return null;
     }
 
     public String printBoard(Board board) {
@@ -180,21 +155,6 @@ public class BuscaminasClient {
             s = s + "\n";
         }
         return s;
-    }
-
-    public void printFirstBoard() {
-        String s = "";
-        for (int i = 0; i < 8; i++) {
-            s = s + (i);
-            for (int j = 0; j < 8; j++) {
-                s = s + "[ ]";
-                if (i == 8) {
-                    System.out.println(i);
-                }
-            }
-            s = s + "\n";
-        }
-        System.out.println(s);
     }
 
     public String printEndedBoard(Board board) {

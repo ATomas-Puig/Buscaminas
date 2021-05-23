@@ -1,44 +1,39 @@
-package model;
+package main;
+
+import model.Board;
+import model.Move;
 
 import java.io.*;
 import java.net.*;
 
 public class BuscaminasServer {
-    boolean end;
-    DatagramSocket socket;
-    int port, players_ended, multiPort = 5557;
-    Board board;
+
+    private Board board;
+    private int port, multiPort = 5557;
+    private boolean end;
+    private DatagramSocket socket;
+
     MulticastSocket multiSocket;
     InetAddress multicastIP;
-
-    NetworkInterface nInterface;
 
     public BuscaminasServer(int port) {
         try {
             socket = new DatagramSocket(port);
             multiSocket = new MulticastSocket(multiPort);
             multicastIP = InetAddress.getByName("224.0.0.10");
-            nInterface = NetworkInterface.getByName("wlan1");
 
-        } catch (SocketException e) {
-            e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
-
         this.port = port;
         board = new Board();
         board.initBoard();
         end = false;
-        players_ended = 0;
-
     }
 
     public void runServer() throws IOException {
         byte[] receivingData = new byte[1024];
         byte[] sendingData;
-        InetAddress clientIP;
-        int clientPort;
 
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         ObjectOutputStream oos = null;
@@ -58,13 +53,11 @@ public class BuscaminasServer {
             DatagramPacket packet = new DatagramPacket(receivingData, receivingData.length);
             socket.receive(packet);
             sendingData = processData(packet.getData(), packet.getLength());
-            //clientIP = packet.getAddress();
-            //clientPort = packet.getPort();
-            //packet = new DatagramPacket(sendingData, sendingData.length, clientIP, clientPort);
-            //socket.send(packet);
             multiPacket = new DatagramPacket(sendingData, sendingData.length, multicastIP, multiPort);
             multiSocket.send(multiPacket);
         } while (!end);
+        multiSocket.close();
+        socket.close();
     }
 
     private byte[] processData(byte[] data, int length) {
@@ -75,11 +68,11 @@ public class BuscaminasServer {
         try {
             ois = new ObjectInputStream(in);
             move = (Move) ois.readObject();
-
+            System.out.println("Jugador " + move.getPlayer() + ". Coordenadas: " + move.getX() + " " + move.getY());
 
             if (move.getPlayer() == board.getTurn()) {
                 if (board.getBoard()[move.getX()][move.getY()] == 0) {
-                    board.getBoard()[move.getY()][move.getY()] = move.getPlayer();
+                    board.getBoard()[move.getX()][move.getY()] = move.getPlayer();
                     board.changeTurn();
                 } else if (board.getBoard()[move.getX()][move.getY()] == 3) {
                     board.setLoser(move.getPlayer());
